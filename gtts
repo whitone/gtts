@@ -1,0 +1,52 @@
+#!/bin/bash
+#
+# gtts - Google Text-To-Speech (TTS) command line tool
+# usage: gtts [-l language] [-o outfile] text
+#
+# examples:
+# gtts "Hi, I am speaking to you! Please, listen to me!"
+# gtts -l it -o voice.mp3 'gtts, è fantastico! Non trovi?'
+#
+# Copyright 2011 Stefano Cotta Ramusino
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+[ "$#" == "0" ] && { echo -e "Google Text-To-Speech (TTS) command line tool\n\nUsage: $(basename $0) [-l language] [-o outfile] text" >&2; exit 1; }
+
+language="en"
+out="0"
+outfile="-"
+
+[ "$1" == "-l" ] && { [ "$#" -gt "2" ] && { language="$2"; shift 2; } || { echo -e "$(basename $0): missing language" >&2; exit 1; }; }
+[ "$1" == "-o" ] && { [ "$#" -gt "2" ] && { outfile="$2"; out="1"; shift 2; } || { echo -e "$(basename $0): missing outfile" >&2; exit 1; }; }
+
+[ "$outfile" == "-" ] && outfile="$(mktemp /tmp/XXXXXXXXXX)"
+
+prefix="http://translate.google.com/translate_tts?tl="
+what="$(perl -MURI::Escape -e 'print uri_escape($ARGV[0]);' "${@}")"
+
+# using Chrome user agent to avoid "403 Forbidden" server response
+chrome_user_agent="Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Chrome/8.0.552.237 Safari/534.10"
+
+curl \
+  -o ${outfile} \
+  --user-agent "${chrome_user_agent}" \
+  "${prefix}${language}&q=${what}"
+
+mplayer ${outfile}
+
+[ "$out" == "0" ] && rm $outfile
+
+exit 0
